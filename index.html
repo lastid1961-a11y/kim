@@ -26,6 +26,8 @@
         .no-scrollbar::-webkit-scrollbar { display: none; }
         .trip-card { transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1); }
         .trip-card:active { transform: scale(0.97); }
+        .modal { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.6); z-index: 5000; align-items: center; justify-content: center; padding: 20px; backdrop-filter: blur(4px); }
+        .modal.active { display: flex; }
     </style>
 </head>
 <body class="pb-36">
@@ -45,8 +47,8 @@
                     </div>
                 </button>
                 <div class="flex gap-2">
-                    <button onclick="exportData()" class="p-2.5 bg-white rounded-2xl shadow-sm text-slate-400 hover:text-blue-600">
-                        <i data-lucide="download" class="w-5 h-5"></i>
+                    <button onclick="openShareModal()" class="p-2.5 bg-white rounded-2xl shadow-sm text-blue-600 hover:bg-blue-50">
+                        <i data-lucide="share-2" class="w-5 h-5"></i>
                     </button>
                 </div>
             </div>
@@ -168,7 +170,7 @@
                 </div>
             </section>
 
-            <!-- MEMO TAB (기존 유지) -->
+            <!-- MEMO TAB -->
             <section id="tab-memo" class="hidden space-y-6 fade-in">
                 <div id="check-list" class="space-y-2"></div>
                 <div class="flex gap-2">
@@ -178,6 +180,23 @@
                 <textarea id="memo-field" oninput="saveCurrentData()" class="w-full h-48 bg-white border border-slate-100 rounded-3xl p-5 text-sm outline-none shadow-sm" placeholder="여행의 감상을 자유롭게 남기세요..."></textarea>
             </section>
         </main>
+
+        <!-- Share Modal -->
+        <div id="share-modal" class="modal">
+            <div class="bg-white rounded-[2.5rem] p-8 w-full max-w-xs shadow-2xl text-center space-y-6">
+                <div class="w-16 h-16 bg-blue-50 text-blue-600 rounded-3xl flex items-center justify-center mx-auto">
+                    <i data-lucide="send" class="w-8 h-8"></i>
+                </div>
+                <div>
+                    <h3 class="text-lg font-black text-slate-900">여행 공유하기</h3>
+                    <p class="text-xs text-slate-400 mt-2">현재 여행 데이터를 링크에 담았습니다.<br>카톡으로 바로 보내보세요!</p>
+                </div>
+                <button onclick="copyShareLink()" class="w-full bg-blue-600 text-white py-4 rounded-2xl font-black text-sm shadow-xl shadow-blue-100 active:scale-95 transition-transform">
+                    공유 링크 복사하기
+                </button>
+                <button onclick="closeShareModal()" class="text-xs font-bold text-slate-300 uppercase tracking-widest">나중에 하기</button>
+            </div>
+        </div>
 
         <!-- AI Control Center -->
         <div class="fixed bottom-8 left-1/2 -translate-x-1/2 w-[92%] max-w-sm glass-panel rounded-[3rem] p-3 flex justify-between items-center z-[2000] shadow-2xl shadow-blue-200/50">
@@ -207,7 +226,6 @@
         const apiKey = ""; // Gemini API Key
         let map, markers = [];
         
-        // Global App Database Structure
         let globalDB = JSON.parse(localStorage.getItem('gst_v3_db')) || {
             trips: [
                 {
@@ -231,11 +249,13 @@
             globalDB.currentTripId = globalDB.trips[0].id;
         }
 
-        // --- Core Helpers ---
         const getCurrentTrip = () => globalDB.trips.find(t => t.id === globalDB.currentTripId);
         const saveCurrentData = () => localStorage.setItem('gst_v3_db', JSON.stringify(globalDB));
 
         window.onload = () => {
+            // URL에 데이터가 포함되어 있는지 확인 (공유된 링크인 경우)
+            checkSharedLink();
+            
             lucide.createIcons();
             initMap();
             startTime();
@@ -243,6 +263,61 @@
             updateAISuggestion();
             if(getCurrentTrip()) document.getElementById('memo-field').value = getCurrentTrip().memo;
         };
+
+        // --- SHARE LINK LOGIC ---
+        function checkSharedLink() {
+            const urlParams = new URLSearchParams(window.location.search);
+            const sharedData = urlParams.get('data');
+            if (sharedData) {
+                try {
+                    // Base64 디코딩 후 데이터 병합
+                    const decodedData = JSON.parse(decodeURIComponent(atob(sharedData)));
+                    if (confirm(`"${decodedData.name}" 여행 데이터를 불러올까요? 기존 목록에 추가됩니다.`)) {
+                        const newTrip = { ...decodedData, id: Date.now() };
+                        globalDB.trips.push(newTrip);
+                        globalDB.currentTripId = newTrip.id;
+                        saveCurrentData();
+                        // 데이터 불러온 후 깨끗한 URL로 변경
+                        window.history.replaceState({}, document.title, window.location.pathname);
+                    }
+                } catch (e) {
+                    console.error("공유 데이터 오류:", e);
+                }
+            }
+        }
+
+        function openShareModal() { document.getElementById('share-modal').classList.add('active'); lucide.createIcons(); }
+        function closeShareModal() { document.getElementById('share-modal').classList.remove('active'); }
+
+        function copyShareLink() {
+            const trip = getCurrentTrip();
+            if (!trip) return;
+
+            // 현재 여행 데이터만 추출하여 인코딩 (Base64)
+            // 주의: 너무 큰 데이터(고해상도 사진 다수 등)는 URL 길이 제한에 걸릴 수 있음
+            const dataToShare = {
+                name: trip.name,
+                currency: trip.currency,
+                plans: trip.plans,
+                expenses: trip.expenses,
+                checks: trip.checks,
+                memo: trip.memo,
+                gallery: trip.gallery.slice(0, 3) // URL 길이를 위해 사진은 최근 3장만 포함
+            };
+
+            const encoded = btoa(encodeURIComponent(JSON.stringify(dataToShare)));
+            const shareUrl = `${window.location.origin}${window.location.pathname}?data=${encoded}`;
+
+            const el = document.createElement('textarea');
+            el.value = shareUrl;
+            document.body.appendChild(el);
+            el.select();
+            document.execCommand('copy');
+            document.body.removeChild(el);
+
+            alert("공유 링크가 클립보드에 복사되었습니다! 카톡창에 붙여넣으세요.");
+            closeShareModal();
+        }
 
         function initMap() {
             map = L.map('map', { zoomControl: false }).setView([38.27, 128.55], 11);
@@ -265,7 +340,6 @@
             lucide.createIcons();
         }
 
-        // --- TRIP MANAGER ---
         function toggleTripManager() { switchTab('settings'); }
         
         function createNewTrip() {
@@ -304,7 +378,6 @@
             if(trip) { trip.currency = val; renderAll(); }
         }
 
-        // --- RENDERERS ---
         function renderAll() {
             const trip = getCurrentTrip();
             if (!trip) return;
@@ -411,7 +484,6 @@
             lucide.createIcons();
         }
 
-        // --- ACTIONS ---
         function deletePlan(id) { getCurrentTrip().plans = getCurrentTrip().plans.filter(p => p.id !== id); renderAll(); }
         function deleteExpense(idx) { getCurrentTrip().expenses.splice(idx, 1); renderAll(); }
         function deleteCheck(idx) { getCurrentTrip().checks.splice(idx, 1); renderAll(); }
@@ -427,7 +499,10 @@
         function addGalleryImage(input) {
             if (input.files && input.files[0]) {
                 const reader = new FileReader();
-                reader.onload = (e) => { getCurrentTrip().gallery.push(e.target.result); renderAll(); };
+                reader.onload = (e) => { 
+                    if(e.target.result.length > 500000) { alert("사진 용량이 너무 큽니다. 공유를 위해 작은 사진을 사용해주세요."); return; }
+                    getCurrentTrip().gallery.push(e.target.result); renderAll(); 
+                };
                 reader.readAsDataURL(input.files[0]);
             }
         }
@@ -435,28 +510,25 @@
             const data = JSON.stringify(globalDB, null, 2);
             const el = document.createElement('textarea');
             el.value = data; document.body.appendChild(el); el.select(); document.execCommand('copy'); document.body.removeChild(el);
-            alert("전체 여행 데이터가 클립보드에 복사되었습니다!");
+            alert("전체 데이터가 복사되었습니다.");
         }
 
         function updateAISuggestion() {
             const hr = new Date().getHours();
             const tripName = getCurrentTrip() ? getCurrentTrip().name : "여행";
-            let msg = hr < 9 ? `${tripName}의 아침! <br>설레는 일정을 시작해볼까요?` : 
-                      hr < 14 ? "점심 시간이에요. <br>현지 맛집을 음성으로 물어보세요." :
-                      hr < 18 ? "오후의 여유, <br>근처 카페를 찾아볼까요?" : "오늘 하루 어떠셨나요? <br>사진과 일기를 남겨보세요.";
+            let msg = hr < 9 ? `${tripName}의 아침! <br>일정을 시작해볼까요?` : 
+                      hr < 14 ? "점심 시간이에요. <br>맛있는 식사 하세요!" :
+                      hr < 18 ? "오후의 여유, <br>카페에 들러볼까요?" : "오늘 하루 어떠셨나요? <br>기록을 남겨보세요.";
             document.getElementById('ai-suggestion').innerHTML = msg;
         }
 
-        // --- GEMINI AI CORE ---
-        
-        // 1. Voice Assistant (Fix & Professional Prompt)
         async function startAIVoice() {
-            if (!('webkitSpeechRecognition' in window)) { alert("음성 인식을 지원하지 않는 브라우저입니다."); return; }
+            if (!('webkitSpeechRecognition' in window)) { alert("음성 인식을 지원하지 않습니다."); return; }
             const recognition = new webkitSpeechRecognition();
             recognition.lang = 'ko-KR';
             recognition.onstart = () => {
                 document.getElementById('mic-btn').classList.add('pulse-mic');
-                document.getElementById('ai-status').innerText = "사용자의 말을 분석 중...";
+                document.getElementById('ai-status').innerText = "분석 중...";
             };
             recognition.onend = () => {
                 document.getElementById('mic-btn').classList.remove('pulse-mic');
@@ -472,11 +544,8 @@
         async function processVoiceCommand(userInput) {
             const loading = document.getElementById('ai-loading');
             loading.classList.remove('hidden');
-            
-            const systemPrompt = `당신은 여행 비서입니다. 사용자의 입력을 분석하여 JSON 데이터로 변환하세요.
-            'expense' (name, amount, category), 'memo' (text), 'plan' (title, time HH:mm) 카테고리를 분류하세요.
-            현재 여행 통화: ${getCurrentTrip().currency}`;
-
+            const systemPrompt = `당신은 여행 비서입니다. JSON으로만 응답하세요. 
+            'expense' (name, amount), 'memo' (text), 'plan' (title, time) 분류.`;
             try {
                 const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-09-2025:generateContent?key=${apiKey}`, {
                     method: 'POST',
@@ -488,49 +557,34 @@
                     })
                 });
                 const result = await response.json();
-                const aiAction = JSON.parse(result.candidates[0].content.parts[0].text);
-                handleAIAction(aiAction);
-            } catch (err) { alert("AI 처리에 실패했습니다. API 키를 확인해주세요."); } finally { loading.classList.add('hidden'); }
+                handleAIAction(JSON.parse(result.candidates[0].content.parts[0].text));
+            } catch (err) { console.error(err); } finally { loading.classList.add('hidden'); }
         }
 
-        // 2. Receipt Scanner (Vision OCR)
         async function scanReceipt(input) {
             if (!input.files || !input.files[0]) return;
             const loading = document.getElementById('ai-loading');
             loading.classList.remove('hidden');
-
             const reader = new FileReader();
             reader.onload = async (e) => {
                 const base64Data = e.target.result.split(',')[1];
-                const prompt = "영수증 이미지에서 상호명(name)과 총액(amount, 숫자만)을 추출하여 JSON {name: string, amount: number} 형식으로 응답하세요.";
-
                 try {
                     const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-09-2025:generateContent?key=${apiKey}`, {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
                         body: JSON.stringify({
-                            contents: [{
-                                parts: [
-                                    { text: prompt },
-                                    { inlineData: { mimeType: "image/png", data: base64Data } }
-                                ]
-                            }],
+                            contents: [{ parts: [{ text: "영수증 {name, amount} 추출" }, { inlineData: { mimeType: "image/png", data: base64Data } }] }],
                             generationConfig: { responseMimeType: "application/json" }
                         })
                     });
                     const result = await response.json();
                     const extracted = JSON.parse(result.candidates[0].content.parts[0].text);
                     if (extracted.amount) {
-                        getCurrentTrip().expenses.push({ 
-                            name: extracted.name || "스캔 지출", 
-                            amount: extracted.amount, 
-                            category: "식비/간식" 
-                        });
+                        getCurrentTrip().expenses.push({ name: extracted.name || "스캔 지출", amount: extracted.amount, category: "식비" });
                         renderAll();
                         switchTab('expense');
-                        alert(`${extracted.name}에서 결제된 ${extracted.amount.toLocaleString()}원을 등록했습니다.`);
                     }
-                } catch (err) { alert("영수증 분석에 실패했습니다."); } finally { loading.classList.add('hidden'); }
+                } catch (err) { alert("분석 실패"); } finally { loading.classList.add('hidden'); }
             };
             reader.readAsDataURL(input.files[0]);
         }
@@ -538,7 +592,7 @@
         function handleAIAction(action) {
             const trip = getCurrentTrip();
             if (action.type === 'expense') {
-                trip.expenses.push({ name: action.data.name, amount: action.data.amount, category: action.data.category || '기타' });
+                trip.expenses.push({ name: action.data.name, amount: action.data.amount, category: '기타' });
                 switchTab('expense');
             } else if (action.type === 'memo') {
                 trip.checks.push({ text: action.data.text, done: false });
@@ -551,9 +605,9 @@
         }
 
         function addNewPlanManually() {
-            const title = prompt("장소 이름을 입력하세요:");
+            const title = prompt("장소 이름:");
             if(!title) return;
-            const time = prompt("방문 시간을 입력하세요 (예: 15:30):", "12:00");
+            const time = prompt("시간 (예: 15:30):", "12:00");
             getCurrentTrip().plans.push({ id: Date.now(), title, time, lat: 38.27 + (Math.random() * 0.1), lng: 128.55 + (Math.random() * 0.1) });
             renderAll();
         }

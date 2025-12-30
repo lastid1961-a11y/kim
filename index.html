@@ -3,13 +3,12 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Goseong Smart Travel AI</title>
+    <title>Global Smart Travel AI</title>
     
-    <!-- 카카오톡/SNS 공유 최적화 (Open Graph) -->
-    <meta property="og:title" content="고성 스마트 여행 가이드">
-    <meta property="og:description" content="AI 비서와 함께하는 똑똑한 고성 여행 올인원 앱">
-    <meta property="og:image" content="https://images.unsplash.com/photo-1590244955328-936655a64389?auto=format&fit=crop&q=80&w=1000">
-    <meta property="og:type" content="website">
+    <!-- SNS 공유 최적화 -->
+    <meta property="og:title" content="나의 스마트 AI 여행 가이드">
+    <meta property="og:description" content="AI 비서와 함께하는 전 세계 여행 올인원 앱">
+    <meta property="og:image" content="https://images.unsplash.com/photo-1488646953014-85cb44e25828?auto=format&fit=crop&q=80&w=1000">
 
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://unpkg.com/lucide@latest"></script>
@@ -17,167 +16,224 @@
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Pretendard:wght@400;600;700&display=swap');
-        body { font-family: 'Pretendard', sans-serif; background-color: #f8fafc; overflow-x: hidden; }
-        .glass-panel { background: rgba(255, 255, 255, 0.7); backdrop-filter: blur(15px); border: 1px solid rgba(255, 255, 255, 0.3); }
-        .tab-active { color: #2563eb; position: relative; font-weight: 700; }
-        .tab-active::after { content: ''; position: absolute; bottom: -4px; left: 50%; transform: translateX(-50%); width: 20px; height: 3px; background: #2563eb; border-radius: 10px; }
-        #map { height: 280px; width: 100%; border-radius: 24px; z-index: 10; border: 4px solid white; box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1); }
+        body { font-family: 'Pretendard', sans-serif; background-color: #f1f5f9; overflow-x: hidden; color: #1e293b; }
+        .glass-panel { background: rgba(255, 255, 255, 0.85); backdrop-filter: blur(20px); border: 1px solid rgba(255, 255, 255, 0.4); }
+        .tab-active { color: #2563eb; position: relative; font-weight: 800; }
+        .tab-active::after { content: ''; position: absolute; bottom: -6px; left: 50%; transform: translateX(-50%); width: 24px; height: 4px; background: #2563eb; border-radius: 10px; }
+        #map { height: 250px; width: 100%; border-radius: 28px; z-index: 10; border: 4px solid white; box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1); }
         .pulse-mic { animation: pulse 1.5s infinite; background: #ef4444 !important; }
-        @keyframes pulse { 0% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.7); } 70% { box-shadow: 0 0 0 15px rgba(239, 68, 68, 0); } 100% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0); } }
-        .fade-in { animation: fadeIn 0.4s ease-out; }
-        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
-        .gallery-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(100px, 1fr)); gap: 8px; }
-        .gallery-item { aspect-ratio: 1; border-radius: 12px; overflow: hidden; position: relative; }
-        .gallery-item img { width: 100%; height: 100%; object-fit: cover; }
+        @keyframes pulse { 0% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.6); } 70% { box-shadow: 0 0 0 20px rgba(239, 68, 68, 0); } 100% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0); } }
+        .no-scrollbar::-webkit-scrollbar { display: none; }
+        .trip-card { transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1); }
+        .trip-card:active { transform: scale(0.97); }
     </style>
 </head>
-<body class="pb-32">
+<body class="pb-36">
 
     <div class="max-w-md mx-auto min-h-screen bg-slate-50 relative shadow-2xl overflow-hidden">
         
         <!-- Header -->
-        <header class="p-6 pb-2 sticky top-0 bg-slate-50/80 backdrop-blur-md z-[100]">
+        <header class="p-6 pb-2 sticky top-0 bg-slate-50/90 backdrop-blur-md z-[100] border-b border-slate-200/50">
             <div class="flex justify-between items-center">
-                <div>
-                    <div class="flex items-center gap-2">
-                        <div class="w-2 h-2 bg-blue-600 rounded-full animate-ping"></div>
-                        <h1 class="text-xl font-black tracking-tighter text-slate-900">GOSEONG SMART</h1>
+                <button onclick="toggleTripManager()" class="flex items-center gap-2 group">
+                    <div class="p-2 bg-blue-50 rounded-xl group-active:scale-90 transition-transform">
+                        <i data-lucide="briefcase" class="w-5 h-5 text-blue-600"></i>
                     </div>
-                    <p id="ai-status" class="text-[10px] font-bold text-slate-400 mt-0.5 uppercase tracking-widest leading-none">AI Assistant Ready</p>
-                </div>
+                    <div class="text-left">
+                        <h1 id="current-trip-name" class="text-sm font-black tracking-tight text-slate-900 leading-none">여행을 선택하세요</h1>
+                        <p class="text-[9px] font-bold text-slate-400 uppercase tracking-widest mt-1">Trip Manager</p>
+                    </div>
+                </button>
                 <div class="flex gap-2">
-                    <button onclick="exportData()" class="p-2.5 bg-white rounded-2xl shadow-sm text-slate-500 hover:text-blue-600 transition-colors">
-                        <i data-lucide="share-2" class="w-5 h-5"></i>
+                    <button onclick="exportData()" class="p-2.5 bg-white rounded-2xl shadow-sm text-slate-400 hover:text-blue-600">
+                        <i data-lucide="download" class="w-5 h-5"></i>
                     </button>
                 </div>
             </div>
         </header>
 
-        <!-- Welcome Card -->
-        <div class="px-6 mb-6 mt-2">
-            <div class="bg-gradient-to-br from-blue-600 to-indigo-800 p-6 rounded-[2rem] text-white shadow-xl shadow-blue-200 relative overflow-hidden">
+        <!-- Status Card -->
+        <div class="px-6 mb-6 mt-4">
+            <div class="bg-slate-900 p-6 rounded-[2.5rem] text-white shadow-2xl relative overflow-hidden">
                 <div class="relative z-10">
                     <div class="flex justify-between items-center mb-4">
-                        <span id="display-date" class="text-[10px] font-bold bg-white/20 px-3 py-1 rounded-full uppercase tracking-widest">2026.01.01</span>
-                        <div id="clock" class="text-sm font-mono font-bold opacity-80">00:00:00</div>
+                        <div id="currency-badge" class="flex items-center gap-1.5 bg-white/10 px-3 py-1 rounded-full border border-white/10">
+                            <i data-lucide="globe" class="w-3 h-3 text-blue-400"></i>
+                            <span id="current-currency" class="text-[10px] font-black uppercase">KRW (₩)</span>
+                        </div>
+                        <div id="clock" class="text-xs font-mono font-bold opacity-60">00:00:00</div>
                     </div>
-                    <p id="ai-suggestion" class="text-lg font-bold leading-tight">"지금은 고성 바다의 <br>파도 소리를 들을 시간이에요."</p>
+                    <h2 id="ai-suggestion" class="text-xl font-bold leading-tight tracking-tight">AI 비서가 여행을 <br>준비 중입니다.</h2>
                 </div>
-                <div class="absolute -right-10 -bottom-10 w-40 h-40 bg-white/10 rounded-full blur-3xl"></div>
+                <!-- Decoration -->
+                <div class="absolute -right-12 -top-12 w-48 h-48 bg-blue-600/20 rounded-full blur-3xl"></div>
             </div>
         </div>
 
         <!-- Tab Navigation -->
-        <nav class="flex px-8 mb-6 justify-between items-center border-b border-slate-200/50 overflow-x-auto no-scrollbar">
-            <button onclick="switchTab('plan', this)" class="pb-3 text-sm font-bold text-slate-400 tab-active whitespace-nowrap">일정</button>
-            <button onclick="switchTab('expense', this)" class="pb-3 text-sm font-bold text-slate-400 whitespace-nowrap">가계부</button>
-            <button onclick="switchTab('gallery', this)" class="pb-3 text-sm font-bold text-slate-400 whitespace-nowrap">갤러리</button>
-            <button onclick="switchTab('memo', this)" class="pb-3 text-sm font-bold text-slate-400 whitespace-nowrap">메모</button>
+        <nav class="flex px-8 mb-6 justify-between items-center border-b border-slate-200/50 overflow-x-auto no-scrollbar gap-6">
+            <button onclick="switchTab('plan', this)" class="pb-3 text-xs font-bold text-slate-400 tab-active whitespace-nowrap">일정</button>
+            <button onclick="switchTab('expense', this)" class="pb-3 text-xs font-bold text-slate-400 whitespace-nowrap">지출</button>
+            <button onclick="switchTab('gallery', this)" class="pb-3 text-xs font-bold text-slate-400 whitespace-nowrap">갤러리</button>
+            <button onclick="switchTab('memo', this)" class="pb-3 text-xs font-bold text-slate-400 whitespace-nowrap">메모</button>
+            <button onclick="switchTab('settings', this)" class="pb-3 text-xs font-bold text-slate-400 whitespace-nowrap text-blue-500"><i data-lucide="settings" class="w-4 h-4"></i></button>
         </nav>
 
         <!-- Content Area -->
-        <main class="px-6">
+        <main class="px-6 min-h-[50vh]">
             
             <!-- PLAN TAB -->
             <section id="tab-plan" class="space-y-6 fade-in">
                 <div id="map"></div>
-                <div class="flex justify-between items-center px-1">
-                    <h3 class="font-bold text-slate-900 flex items-center gap-2 text-sm">
-                        <i data-lucide="map-pin" class="w-4 h-4 text-blue-600"></i> 오늘의 루트
+                <div class="flex justify-between items-center">
+                    <h3 class="font-black text-slate-900 flex items-center gap-2 text-xs uppercase tracking-widest">
+                        Itinerary
                     </h3>
-                    <button onclick="clearPlans()" class="text-[10px] font-bold text-slate-400 hover:text-red-500">전체 삭제</button>
+                    <button onclick="addNewPlanManually()" class="p-2 bg-blue-100 text-blue-600 rounded-xl"><i data-lucide="plus" class="w-4 h-4"></i></button>
                 </div>
                 <div id="plan-list" class="space-y-3 pb-4"></div>
             </section>
 
             <!-- EXPENSE TAB -->
             <section id="tab-expense" class="hidden space-y-6 fade-in">
-                <div class="grid grid-cols-2 gap-4">
-                    <div class="bg-slate-900 rounded-3xl p-5 text-white shadow-lg">
-                        <p class="text-[10px] uppercase opacity-50 mb-1 font-bold">Total Spent</p>
-                        <h2 id="total-expense" class="text-xl font-bold">0원</h2>
-                    </div>
-                    <div class="bg-white rounded-3xl p-5 border border-slate-100 shadow-sm flex flex-col justify-center items-center">
-                        <p class="text-[10px] uppercase text-slate-400 mb-1 font-bold">Entries</p>
-                        <h2 id="expense-count" class="text-xl font-bold text-slate-900">0건</h2>
+                <div class="grid grid-cols-1 gap-4">
+                    <div class="bg-gradient-to-r from-blue-600 to-indigo-700 rounded-[2rem] p-6 text-white shadow-xl">
+                        <div class="flex justify-between items-start mb-2">
+                            <p class="text-[10px] uppercase font-black opacity-60">Total Budget</p>
+                            <i data-lucide="wallet" class="w-4 h-4 opacity-40"></i>
+                        </div>
+                        <h2 id="total-expense" class="text-3xl font-black">₩ 0</h2>
+                        <div class="mt-4 pt-4 border-t border-white/10 flex justify-between text-[10px] font-bold opacity-80">
+                            <span id="expense-count">0건의 지출</span>
+                            <span id="currency-info">환율: 1.00</span>
+                        </div>
                     </div>
                 </div>
-                <div id="expense-list" class="space-y-2"></div>
+
+                <!-- Receipt Scanner UI -->
+                <div class="bg-white rounded-3xl p-6 border-2 border-dashed border-slate-200 flex flex-col items-center text-center group active:bg-slate-50 transition-colors">
+                    <div class="w-12 h-12 bg-blue-50 text-blue-600 rounded-2xl flex items-center justify-center mb-3">
+                        <i data-lucide="camera" class="w-6 h-6"></i>
+                    </div>
+                    <h4 class="text-sm font-bold text-slate-800">영수증 AI 스캔</h4>
+                    <p class="text-[10px] text-slate-400 mt-1 uppercase font-bold tracking-tighter">Gemini OCR Intelligence</p>
+                    <input type="file" id="receipt-input" class="hidden" accept="image/*" onchange="scanReceipt(this)">
+                    <label for="receipt-input" class="mt-4 bg-slate-900 text-white px-6 py-2.5 rounded-2xl text-[11px] font-black cursor-pointer shadow-lg shadow-slate-200">사진 찍기</label>
+                </div>
+
+                <div id="expense-list" class="space-y-3"></div>
             </section>
 
             <!-- GALLERY TAB -->
             <section id="tab-gallery" class="hidden space-y-6 fade-in">
                 <div class="flex justify-between items-center">
-                    <h3 class="font-bold text-slate-900 text-sm flex items-center gap-2">
-                        <i data-lucide="image" class="w-4 h-4 text-pink-500"></i> 여행 사진첩
-                    </h3>
-                    <label class="cursor-pointer bg-blue-600 text-white text-[10px] px-3 py-1.5 rounded-full font-bold">
+                    <h3 class="font-black text-slate-900 text-xs uppercase tracking-widest">Photo Gallery</h3>
+                    <label class="cursor-pointer bg-pink-500 text-white text-[10px] px-4 py-2 rounded-2xl font-black shadow-lg shadow-pink-100">
                         사진 추가
                         <input type="file" class="hidden" accept="image/*" onchange="addGalleryImage(this)">
                     </label>
                 </div>
-                <div id="gallery-list" class="gallery-grid"></div>
+                <div id="gallery-list" class="grid grid-cols-3 gap-2"></div>
             </section>
 
-            <!-- MEMO TAB -->
+            <!-- SETTINGS / TRIP MANAGER -->
+            <section id="tab-settings" class="hidden space-y-6 fade-in">
+                <div class="bg-white rounded-3xl p-6 shadow-sm border border-slate-100 space-y-6">
+                    <div>
+                        <h4 class="text-xs font-black text-slate-400 uppercase tracking-widest mb-4">Trip Settings</h4>
+                        <div class="space-y-4">
+                            <div class="flex justify-between items-center">
+                                <span class="text-sm font-bold">기본 통화</span>
+                                <select id="set-currency" onchange="updateTripCurrency(this.value)" class="text-sm font-bold bg-slate-50 border-none rounded-xl p-2 outline-none">
+                                    <option value="KRW">KRW (₩)</option>
+                                    <option value="USD">USD ($)</option>
+                                    <option value="JPY">JPY (¥)</option>
+                                    <option value="EUR">EUR (€)</option>
+                                </select>
+                            </div>
+                            <div class="flex justify-between items-center">
+                                <span class="text-sm font-bold">여행 이름</span>
+                                <input type="text" id="set-trip-name" oninput="updateTripName(this.value)" class="text-right text-sm font-bold bg-slate-50 border-none rounded-xl p-2 outline-none w-32" placeholder="고성 여행">
+                            </div>
+                        </div>
+                    </div>
+                    <hr class="opacity-50">
+                    <div>
+                        <h4 class="text-xs font-black text-slate-400 uppercase tracking-widest mb-4">Manage Trips</h4>
+                        <div id="trip-history-list" class="space-y-2"></div>
+                        <button onclick="createNewTrip()" class="w-full mt-4 py-4 border-2 border-dashed border-blue-200 text-blue-600 rounded-3xl text-xs font-black hover:bg-blue-50 transition-colors">
+                            + 새로운 여행 시작하기
+                        </button>
+                    </div>
+                </div>
+            </section>
+
+            <!-- MEMO TAB (기존 유지) -->
             <section id="tab-memo" class="hidden space-y-6 fade-in">
-                <div class="space-y-3">
-                    <h3 class="font-bold text-slate-900 flex items-center gap-2 text-sm">
-                        <i data-lucide="check-circle-2" class="w-4 h-4 text-green-500"></i> 체크리스트
-                    </h3>
-                    <div id="check-list" class="space-y-2"></div>
+                <div id="check-list" class="space-y-2"></div>
+                <div class="flex gap-2">
+                    <input type="text" id="new-check-input" class="flex-1 bg-white border border-slate-100 rounded-2xl px-4 py-3 text-sm outline-none" placeholder="할 일 추가...">
+                    <button onclick="addCheck()" class="p-3 bg-green-500 text-white rounded-2xl"><i data-lucide="plus" class="w-5 h-5"></i></button>
                 </div>
-                <hr class="opacity-50">
-                <div class="space-y-3">
-                    <h3 class="font-bold text-slate-900 flex items-center gap-2 text-sm">
-                        <i data-lucide="sticky-note" class="w-4 h-4 text-amber-500"></i> 자유 메모
-                    </h3>
-                    <textarea id="memo-field" oninput="saveData()" class="w-full h-48 bg-white border border-slate-100 rounded-3xl p-5 text-sm outline-none focus:ring-2 focus:ring-blue-500/20 transition-all shadow-sm" placeholder="무엇이든 기록하세요..."></textarea>
-                </div>
+                <textarea id="memo-field" oninput="saveCurrentData()" class="w-full h-48 bg-white border border-slate-100 rounded-3xl p-5 text-sm outline-none shadow-sm" placeholder="여행의 감상을 자유롭게 남기세요..."></textarea>
             </section>
         </main>
 
-        <!-- AI Floating Interface -->
-        <div class="fixed bottom-8 left-1/2 -translate-x-1/2 w-[90%] max-w-sm glass-panel rounded-[2.5rem] p-3 flex justify-between items-center z-[2000] shadow-2xl">
+        <!-- AI Control Center -->
+        <div class="fixed bottom-8 left-1/2 -translate-x-1/2 w-[92%] max-w-sm glass-panel rounded-[3rem] p-3 flex justify-between items-center z-[2000] shadow-2xl shadow-blue-200/50">
             <button onclick="switchTab('plan')" class="flex-1 flex flex-col items-center gap-1 text-slate-400" id="nav-plan">
                 <i data-lucide="navigation-2" class="w-5 h-5"></i>
-                <span class="text-[9px] font-bold">지도</span>
+                <span class="text-[9px] font-black uppercase">Guide</span>
             </button>
             
             <div class="relative -top-8">
-                <button onclick="startAIVoice()" id="mic-btn" class="w-16 h-16 bg-blue-600 rounded-full flex items-center justify-center text-white shadow-xl shadow-blue-200 transition-all active:scale-95">
+                <button onclick="startAIVoice()" id="mic-btn" class="w-16 h-16 bg-blue-600 rounded-full flex items-center justify-center text-white shadow-2xl shadow-blue-400 transition-all active:scale-90 z-20">
                     <i data-lucide="mic" class="w-7 h-7"></i>
                 </button>
-                <div id="ai-loading" class="hidden absolute -top-12 left-1/2 -translate-x-1/2 bg-slate-900 text-white text-[10px] px-3 py-1 rounded-full whitespace-nowrap font-bold">
-                    Gemini 분석 중...
+                <div id="ai-loading" class="hidden absolute -top-14 left-1/2 -translate-x-1/2 bg-slate-900 text-white text-[10px] px-4 py-1.5 rounded-full whitespace-nowrap font-black shadow-xl animate-bounce">
+                    GEMINI THINKING...
                 </div>
             </div>
 
             <button onclick="switchTab('expense')" class="flex-1 flex flex-col items-center gap-1 text-slate-400" id="nav-expense">
-                <i data-lucide="credit-card" class="w-5 h-5"></i>
-                <span class="text-[9px] font-bold">지출</span>
+                <i data-lucide="banknote" class="w-5 h-5"></i>
+                <span class="text-[9px] font-black uppercase">Wallet</span>
             </button>
         </div>
 
     </div>
 
     <script>
-        const apiKey = ""; // Gemini API
+        const apiKey = ""; // Gemini API Key
         let map, markers = [];
         
-        let db = {
-            plans: JSON.parse(localStorage.getItem('gst_plans')) || [
-                { id: 1, title: '아야진 해변 카페', time: '14:00', lat: 38.2721, lng: 128.5541 },
-                { id: 2, title: '백촌막국수 본점', time: '12:30', lat: 38.2591, lng: 128.5562 }
+        // Global App Database Structure
+        let globalDB = JSON.parse(localStorage.getItem('gst_v3_db')) || {
+            trips: [
+                {
+                    id: Date.now(),
+                    name: "첫 번째 고성 여행",
+                    currency: "KRW",
+                    plans: [
+                        { id: 101, title: '아야진 해변', time: '14:00', lat: 38.2721, lng: 128.5541 },
+                        { id: 102, title: '백촌막국수', time: '12:00', lat: 38.2591, lng: 128.5562 }
+                    ],
+                    expenses: [],
+                    gallery: [],
+                    checks: [{ text: '여권 챙기기', done: false }],
+                    memo: ""
+                }
             ],
-            expenses: JSON.parse(localStorage.getItem('gst_expenses')) || [],
-            gallery: JSON.parse(localStorage.getItem('gst_gallery')) || [],
-            checks: JSON.parse(localStorage.getItem('gst_checks')) || [
-                { text: '신분증 챙기기', done: true },
-                { text: '카메라 충전', done: false }
-            ],
-            memo: localStorage.getItem('gst_memo') || ""
+            currentTripId: null
         };
+
+        if (!globalDB.currentTripId && globalDB.trips.length > 0) {
+            globalDB.currentTripId = globalDB.trips[0].id;
+        }
+
+        // --- Core Helpers ---
+        const getCurrentTrip = () => globalDB.trips.find(t => t.id === globalDB.currentTripId);
+        const saveCurrentData = () => localStorage.setItem('gst_v3_db', JSON.stringify(globalDB));
 
         window.onload = () => {
             lucide.createIcons();
@@ -185,11 +241,11 @@
             startTime();
             renderAll();
             updateAISuggestion();
-            document.getElementById('memo-field').value = db.memo;
+            if(getCurrentTrip()) document.getElementById('memo-field').value = getCurrentTrip().memo;
         };
 
         function initMap() {
-            map = L.map('map', { zoomControl: false }).setView([38.27, 128.55], 12);
+            map = L.map('map', { zoomControl: false }).setView([38.27, 128.55], 11);
             L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map);
         }
 
@@ -197,42 +253,73 @@
             setInterval(() => {
                 const now = new Date();
                 document.getElementById('clock').innerText = now.toLocaleTimeString();
-                document.getElementById('display-date').innerText = now.toLocaleDateString();
             }, 1000);
         }
 
         function switchTab(tabId, btn) {
             document.querySelectorAll('main > section').forEach(s => s.classList.add('hidden'));
             document.getElementById(`tab-${tabId}`).classList.remove('hidden');
-            
             document.querySelectorAll('nav button').forEach(b => b.classList.remove('tab-active', 'text-blue-600'));
             if(btn) btn.classList.add('tab-active', 'text-blue-600');
-            else {
-                // Bottom nav switch fallback
-                const topBtns = document.querySelectorAll('nav button');
-                topBtns.forEach(b => {
-                    if(b.innerText.includes(tabId === 'plan' ? '일정' : '가계부')) b.classList.add('tab-active', 'text-blue-600');
-                });
-            }
-
             if(tabId === 'plan') setTimeout(() => map.invalidateSize(), 300);
             lucide.createIcons();
         }
 
-        function updateAISuggestion() {
-            const hr = new Date().getHours();
-            let msg = hr < 9 ? "상쾌한 아침이에요. <br>천진해변에서 일출 보셨나요?" : 
-                      hr < 14 ? "슬슬 배가 고플 시간! <br>막국수 한 그릇 어떠세요?" :
-                      hr < 18 ? "아야진 해변에서 <br>시원한 라떼 한 잔의 여유!" : "고성의 고요한 밤이에요. <br>오늘의 일기를 남겨볼까요?";
-            document.getElementById('ai-suggestion').innerHTML = msg;
+        // --- TRIP MANAGER ---
+        function toggleTripManager() { switchTab('settings'); }
+        
+        function createNewTrip() {
+            const name = prompt("새로운 여행의 이름을 입력하세요:", "여름 휴가");
+            if (!name) return;
+            const newTrip = {
+                id: Date.now(),
+                name: name,
+                currency: "KRW",
+                plans: [],
+                expenses: [],
+                gallery: [],
+                checks: [],
+                memo: ""
+            };
+            globalDB.trips.push(newTrip);
+            globalDB.currentTripId = newTrip.id;
+            renderAll();
+            alert(`"${name}" 여행이 시작되었습니다!`);
         }
 
+        function selectTrip(id) {
+            globalDB.currentTripId = id;
+            renderAll();
+            document.getElementById('memo-field').value = getCurrentTrip().memo;
+            switchTab('plan');
+        }
+
+        function updateTripName(val) {
+            const trip = getCurrentTrip();
+            if(trip) { trip.name = val; document.getElementById('current-trip-name').innerText = val; saveCurrentData(); }
+        }
+
+        function updateTripCurrency(val) {
+            const trip = getCurrentTrip();
+            if(trip) { trip.currency = val; renderAll(); }
+        }
+
+        // --- RENDERERS ---
         function renderAll() {
+            const trip = getCurrentTrip();
+            if (!trip) return;
+
+            document.getElementById('current-trip-name').innerText = trip.name;
+            document.getElementById('current-currency').innerText = `${trip.currency}`;
+            document.getElementById('set-trip-name').value = trip.name;
+            document.getElementById('set-currency').value = trip.currency;
+
             renderPlans();
             renderExpenses();
             renderChecks();
             renderGallery();
-            saveData();
+            renderTripHistory();
+            saveCurrentData();
         }
 
         function renderPlans() {
@@ -240,48 +327,70 @@
             list.innerHTML = '';
             markers.forEach(m => map.removeLayer(m));
             markers = [];
-            db.plans.sort((a,b) => a.time.localeCompare(b.time)).forEach(p => {
-                list.innerHTML += `<div class="bg-white p-4 rounded-3xl shadow-sm border border-slate-50 flex items-center gap-4 fade-in">
+            const plans = getCurrentTrip().plans;
+            plans.sort((a,b) => a.time.localeCompare(b.time)).forEach(p => {
+                list.innerHTML += `<div class="bg-white p-4 rounded-3xl shadow-sm border border-slate-50 flex items-center gap-4 fade-in active:scale-95 transition-transform">
                     <div class="w-12 text-center border-r border-slate-100 pr-2">
                         <span class="text-[10px] font-black text-blue-600">${p.time}</span>
                     </div>
                     <div class="flex-1 font-bold text-sm text-slate-800">${p.title}</div>
                     <button onclick="deletePlan(${p.id})" class="text-slate-200 hover:text-red-400 transition-colors"><i data-lucide="trash-2" class="w-4 h-4"></i></button>
                 </div>`;
-                const m = L.marker([p.lat, p.lng]).addTo(map).bindPopup(p.title);
-                markers.push(m);
+                if(p.lat && p.lng) {
+                    const m = L.marker([p.lat, p.lng]).addTo(map).bindPopup(p.title);
+                    markers.push(m);
+                }
             });
+            if(markers.length > 0) {
+                const group = new L.featureGroup(markers);
+                map.fitBounds(group.getBounds().pad(0.1));
+            }
             lucide.createIcons();
         }
 
         function renderExpenses() {
             const list = document.getElementById('expense-list');
+            const trip = getCurrentTrip();
             list.innerHTML = '';
             let total = 0;
-            db.expenses.forEach((ex, idx) => {
+            trip.expenses.forEach((ex, idx) => {
                 total += ex.amount;
-                list.innerHTML += `<div class="flex justify-between items-center p-4 bg-white rounded-2xl shadow-sm border border-slate-50 fade-in">
-                    <span class="text-xs font-bold text-slate-700">${ex.name}</span>
-                    <div class="flex items-center gap-3">
-                        <span class="text-sm font-black text-slate-900">${ex.amount.toLocaleString()}원</span>
-                        <button onclick="deleteExpense(${idx})" class="text-slate-200"><i data-lucide="x" class="w-4 h-4"></i></button>
+                list.innerHTML += `<div class="flex justify-between items-center p-5 bg-white rounded-3xl shadow-sm border border-slate-50 fade-in">
+                    <div>
+                        <p class="text-[9px] font-black text-slate-400 uppercase tracking-tighter mb-1">${ex.category || '기타'}</p>
+                        <h4 class="text-sm font-bold text-slate-800">${ex.name}</h4>
+                    </div>
+                    <div class="flex items-center gap-4">
+                        <span class="text-base font-black text-slate-900">${trip.currency === 'KRW' ? '₩' : trip.currency} ${ex.amount.toLocaleString()}</span>
+                        <button onclick="deleteExpense(${idx})" class="text-slate-200"><i data-lucide="trash-2" class="w-4 h-4"></i></button>
                     </div>
                 </div>`;
             });
-            document.getElementById('total-expense').innerText = total.toLocaleString() + "원";
-            document.getElementById('expense-count').innerText = db.expenses.length + "건";
+            document.getElementById('total-expense').innerText = `${trip.currency === 'KRW' ? '₩' : trip.currency} ${total.toLocaleString()}`;
+            document.getElementById('expense-count').innerText = `${trip.expenses.length}건의 지출`;
+            lucide.createIcons();
+        }
+
+        function renderTripHistory() {
+            const list = document.getElementById('trip-history-list');
+            list.innerHTML = '';
+            globalDB.trips.forEach(t => {
+                const isActive = t.id === globalDB.currentTripId;
+                list.innerHTML += `<button onclick="selectTrip(${t.id})" class="trip-card w-full flex justify-between items-center p-4 rounded-2xl ${isActive ? 'bg-blue-600 text-white shadow-lg shadow-blue-200' : 'bg-slate-50 text-slate-600 border border-slate-100'}">
+                    <span class="text-sm font-bold">${t.name}</span>
+                    <i data-lucide="${isActive ? 'check-circle' : 'chevron-right'}" class="w-4 h-4"></i>
+                </button>`;
+            });
             lucide.createIcons();
         }
 
         function renderGallery() {
             const list = document.getElementById('gallery-list');
             list.innerHTML = '';
-            db.gallery.forEach((img, idx) => {
-                list.innerHTML += `<div class="gallery-item fade-in group">
-                    <img src="${img}" alt="travel photo">
-                    <button onclick="deleteImage(${idx})" class="absolute top-1 right-1 bg-black/50 text-white p-1 rounded-full opacity-0 group-hover:opacity-100 transition-opacity">
-                        <i data-lucide="trash-2" class="w-3 h-3"></i>
-                    </button>
+            getCurrentTrip().gallery.forEach((img, idx) => {
+                list.innerHTML += `<div class="gallery-item aspect-square rounded-2xl overflow-hidden relative group fade-in shadow-sm">
+                    <img src="${img}" class="w-full h-full object-cover">
+                    <button onclick="deleteImage(${idx})" class="absolute inset-0 bg-black/40 text-white opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center"><i data-lucide="trash-2" class="w-5 h-5"></i></button>
                 </div>`;
             });
             lucide.createIcons();
@@ -290,59 +399,64 @@
         function renderChecks() {
             const list = document.getElementById('check-list');
             list.innerHTML = '';
-            db.checks.forEach((c, idx) => {
-                list.innerHTML += `<div class="flex items-center justify-between p-3 bg-white rounded-2xl shadow-sm border border-slate-50 fade-in">
+            getCurrentTrip().checks.forEach((c, idx) => {
+                list.innerHTML += `<div class="flex items-center justify-between p-4 bg-white rounded-2xl shadow-sm border border-slate-50 fade-in">
                     <div class="flex items-center gap-3">
-                        <input type="checkbox" ${c.done ? 'checked' : ''} onchange="toggleCheck(${idx})" class="w-5 h-5 rounded-lg border-slate-200 text-blue-600 focus:ring-blue-500">
-                        <span class="text-xs font-medium ${c.done ? 'line-through text-slate-300' : 'text-slate-700'}">${c.text}</span>
+                        <input type="checkbox" ${c.done ? 'checked' : ''} onchange="toggleCheck(${idx})" class="w-5 h-5 rounded-lg text-blue-600">
+                        <span class="text-sm font-bold ${c.done ? 'line-through text-slate-300' : 'text-slate-700'}">${c.text}</span>
                     </div>
-                    <button onclick="deleteCheck(${idx})" class="text-slate-200"><i data-lucide="trash-2" class="w-3.5 h-3.5"></i></button>
+                    <button onclick="deleteCheck(${idx})" class="text-slate-200"><i data-lucide="trash-2" class="w-4 h-4"></i></button>
                 </div>`;
             });
             lucide.createIcons();
         }
 
+        // --- ACTIONS ---
+        function deletePlan(id) { getCurrentTrip().plans = getCurrentTrip().plans.filter(p => p.id !== id); renderAll(); }
+        function deleteExpense(idx) { getCurrentTrip().expenses.splice(idx, 1); renderAll(); }
+        function deleteCheck(idx) { getCurrentTrip().checks.splice(idx, 1); renderAll(); }
+        function toggleCheck(idx) { getCurrentTrip().checks[idx].done = !getCurrentTrip().checks[idx].done; renderAll(); }
+        function deleteImage(idx) { getCurrentTrip().gallery.splice(idx, 1); renderAll(); }
+        function addCheck() {
+            const input = document.getElementById('new-check-input');
+            if(!input.value) return;
+            getCurrentTrip().checks.push({ text: input.value, done: false });
+            input.value = "";
+            renderAll();
+        }
         function addGalleryImage(input) {
             if (input.files && input.files[0]) {
                 const reader = new FileReader();
-                reader.onload = (e) => {
-                    db.gallery.push(e.target.result);
-                    renderAll();
-                };
+                reader.onload = (e) => { getCurrentTrip().gallery.push(e.target.result); renderAll(); };
                 reader.readAsDataURL(input.files[0]);
             }
         }
-
-        function deleteImage(idx) { db.gallery.splice(idx, 1); renderAll(); }
-        function toggleCheck(idx) { db.checks[idx].done = !db.checks[idx].done; renderAll(); }
-        function deleteCheck(idx) { db.checks.splice(idx, 1); renderAll(); }
-        function deleteExpense(idx) { db.expenses.splice(idx, 1); renderAll(); }
-        function deletePlan(id) { db.plans = db.plans.filter(p => p.id !== id); renderAll(); }
-        function clearPlans() { if(confirm("모든 일정을 삭제하시겠습니까?")) { db.plans = []; renderAll(); } }
-        
-        function saveData() {
-            db.memo = document.getElementById('memo-field').value;
-            localStorage.setItem('gst_plans', JSON.stringify(db.plans));
-            localStorage.setItem('gst_expenses', JSON.stringify(db.expenses));
-            localStorage.setItem('gst_gallery', JSON.stringify(db.gallery));
-            localStorage.setItem('gst_checks', JSON.stringify(db.checks));
-            localStorage.setItem('gst_memo', db.memo);
-        }
-
         function exportData() {
+            const data = JSON.stringify(globalDB, null, 2);
             const el = document.createElement('textarea');
-            el.value = JSON.stringify(db, null, 2);
-            document.body.appendChild(el); el.select(); document.execCommand('copy'); document.body.removeChild(el);
-            alert("데이터가 클립보드에 복사되었습니다!");
+            el.value = data; document.body.appendChild(el); el.select(); document.execCommand('copy'); document.body.removeChild(el);
+            alert("전체 여행 데이터가 클립보드에 복사되었습니다!");
         }
 
+        function updateAISuggestion() {
+            const hr = new Date().getHours();
+            const tripName = getCurrentTrip() ? getCurrentTrip().name : "여행";
+            let msg = hr < 9 ? `${tripName}의 아침! <br>설레는 일정을 시작해볼까요?` : 
+                      hr < 14 ? "점심 시간이에요. <br>현지 맛집을 음성으로 물어보세요." :
+                      hr < 18 ? "오후의 여유, <br>근처 카페를 찾아볼까요?" : "오늘 하루 어떠셨나요? <br>사진과 일기를 남겨보세요.";
+            document.getElementById('ai-suggestion').innerHTML = msg;
+        }
+
+        // --- GEMINI AI CORE ---
+        
+        // 1. Voice Assistant (Fix & Professional Prompt)
         async function startAIVoice() {
             if (!('webkitSpeechRecognition' in window)) { alert("음성 인식을 지원하지 않는 브라우저입니다."); return; }
             const recognition = new webkitSpeechRecognition();
             recognition.lang = 'ko-KR';
             recognition.onstart = () => {
                 document.getElementById('mic-btn').classList.add('pulse-mic');
-                document.getElementById('ai-status').innerText = "듣는 중...";
+                document.getElementById('ai-status').innerText = "사용자의 말을 분석 중...";
             };
             recognition.onend = () => {
                 document.getElementById('mic-btn').classList.remove('pulse-mic');
@@ -350,16 +464,18 @@
             };
             recognition.onresult = async (event) => {
                 const speechText = event.results[0][0].transcript;
-                processWithGemini(speechText);
+                processVoiceCommand(speechText);
             };
             recognition.start();
         }
 
-        async function processWithGemini(userInput) {
+        async function processVoiceCommand(userInput) {
             const loading = document.getElementById('ai-loading');
             loading.classList.remove('hidden');
-            const systemPrompt = `당신은 여행 비서 AI입니다. 사용자의 한국어 입력을 분석하여 JSON 데이터로 변환하세요.
-            'expense' (name, amount), 'memo' (text), 'plan' (title, time) 카테고리를 사용하세요.`;
+            
+            const systemPrompt = `당신은 여행 비서입니다. 사용자의 입력을 분석하여 JSON 데이터로 변환하세요.
+            'expense' (name, amount, category), 'memo' (text), 'plan' (title, time HH:mm) 카테고리를 분류하세요.
+            현재 여행 통화: ${getCurrentTrip().currency}`;
 
             try {
                 const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-09-2025:generateContent?key=${apiKey}`, {
@@ -372,18 +488,73 @@
                     })
                 });
                 const result = await response.json();
-                handleAIAction(JSON.parse(result.candidates[0].content.parts[0].text));
-            } catch (err) { alert("AI 분석 실패"); } finally { loading.classList.add('hidden'); }
+                const aiAction = JSON.parse(result.candidates[0].content.parts[0].text);
+                handleAIAction(aiAction);
+            } catch (err) { alert("AI 처리에 실패했습니다. API 키를 확인해주세요."); } finally { loading.classList.add('hidden'); }
+        }
+
+        // 2. Receipt Scanner (Vision OCR)
+        async function scanReceipt(input) {
+            if (!input.files || !input.files[0]) return;
+            const loading = document.getElementById('ai-loading');
+            loading.classList.remove('hidden');
+
+            const reader = new FileReader();
+            reader.onload = async (e) => {
+                const base64Data = e.target.result.split(',')[1];
+                const prompt = "영수증 이미지에서 상호명(name)과 총액(amount, 숫자만)을 추출하여 JSON {name: string, amount: number} 형식으로 응답하세요.";
+
+                try {
+                    const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-09-2025:generateContent?key=${apiKey}`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            contents: [{
+                                parts: [
+                                    { text: prompt },
+                                    { inlineData: { mimeType: "image/png", data: base64Data } }
+                                ]
+                            }],
+                            generationConfig: { responseMimeType: "application/json" }
+                        })
+                    });
+                    const result = await response.json();
+                    const extracted = JSON.parse(result.candidates[0].content.parts[0].text);
+                    if (extracted.amount) {
+                        getCurrentTrip().expenses.push({ 
+                            name: extracted.name || "스캔 지출", 
+                            amount: extracted.amount, 
+                            category: "식비/간식" 
+                        });
+                        renderAll();
+                        switchTab('expense');
+                        alert(`${extracted.name}에서 결제된 ${extracted.amount.toLocaleString()}원을 등록했습니다.`);
+                    }
+                } catch (err) { alert("영수증 분석에 실패했습니다."); } finally { loading.classList.add('hidden'); }
+            };
+            reader.readAsDataURL(input.files[0]);
         }
 
         function handleAIAction(action) {
-            if (action.type === 'expense') { db.expenses.push(action.data); switchTab('expense'); }
-            else if (action.type === 'memo') { db.checks.push({ text: action.data.text, done: false }); switchTab('memo'); }
-            else if (action.type === 'plan') {
-                db.plans.push({ id: Date.now(), title: action.data.title, time: action.data.time || "12:00", 
-                    lat: 38.27 + (Math.random() * 0.1), lng: 128.55 + (Math.random() * 0.1) });
+            const trip = getCurrentTrip();
+            if (action.type === 'expense') {
+                trip.expenses.push({ name: action.data.name, amount: action.data.amount, category: action.data.category || '기타' });
+                switchTab('expense');
+            } else if (action.type === 'memo') {
+                trip.checks.push({ text: action.data.text, done: false });
+                switchTab('memo');
+            } else if (action.type === 'plan') {
+                trip.plans.push({ id: Date.now(), title: action.data.title, time: action.data.time || "12:00", lat: 38.27 + (Math.random() * 0.1), lng: 128.55 + (Math.random() * 0.1) });
                 switchTab('plan');
             }
+            renderAll();
+        }
+
+        function addNewPlanManually() {
+            const title = prompt("장소 이름을 입력하세요:");
+            if(!title) return;
+            const time = prompt("방문 시간을 입력하세요 (예: 15:30):", "12:00");
+            getCurrentTrip().plans.push({ id: Date.now(), title, time, lat: 38.27 + (Math.random() * 0.1), lng: 128.55 + (Math.random() * 0.1) });
             renderAll();
         }
     </script>
